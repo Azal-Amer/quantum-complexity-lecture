@@ -1,0 +1,685 @@
+/* @theme physics-theme */
+/* Marp port of assets/physics-theme.css + assets/callouts.css (Obsidian
+   note-viewer snippets — their selectors, .markdown-rendered/.theme-dark/
+   JS-Engine callout faces, don't exist in Marp's exported HTML, so this
+   rebuilds the same warm "physics notebook" visual language, icons, and
+   colors against Marp's own DOM instead). The actual 3D parallelogram
+   faces are drawn by the <script> block at the bottom of 8.2-slides.md
+   (ported from physics-theme-init.js) — Marp's export is a real browser
+   page, so that JS runs the same way it does in Obsidian. */
+
+@import 'default';
+
+:root {
+  --pt-bg:         #FFF8E7;
+  --pt-surface:    #F2E8D5;
+  --pt-text:       #1C1008;
+  --pt-text-2:     #5C4030;
+  --pt-text-muted: #A89880;
+  --pt-border:     rgba(28, 16, 8, 0.16);
+
+  --pt-red:       #C04040;
+  --pt-orange:    #C4621A;
+  --pt-yellow:    #B8860B;
+  --pt-green:     #3A7A3E;
+  --pt-teal:      #24746A;
+  --pt-blue:      #4472A8;
+  --pt-sapphire:  #334E88;
+  --pt-purple:    #6040A0;
+  --pt-flamingo:  #AE3868;
+  /* callouts.css overrides: --callout-color rgb triples ported to hex */
+  --pt-definition: #A7C9C9;
+  --pt-equation:   #B3E1A7;
+
+  --pt-border-w: 1.5px;
+  --pt-hatch-gap: 7px;
+  --pt-depth: 10px;
+
+  /* IQC brand accent (2026-08-12, Azal's request) — kept in sync with
+     manim_explainer/theme.py's IQC_MAROON / IQC_MAROON_LIGHT. Used ONLY on
+     the title slide (section.title) and the bare section-divider slides
+     (section.section) below, plus the persistent footer/pagination band —
+     never on ordinary content-slide elements (h1/h2 elsewhere, callouts,
+     etc. keep their existing neutral colors unchanged). */
+  --pt-iqc-maroon:       #A31033;
+  --pt-iqc-maroon-light: #D42E52;
+}
+
+section {
+  background: var(--pt-bg);
+  color: var(--pt-text);
+  font-family: 'Georgia', 'Iowan Old Style', serif;
+  padding: 56px 64px;
+  /* @import 'default' sets flex + justify-content:center (its own vertical-
+     center look) — override to top-anchor content instead, heading first */
+  display: block;
+  /* section itself does NOT scroll (see .slide-scroll below) — position:
+     relative only, so footer/pagination can sit plain-absolute against it */
+  position: relative;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+/* The actual scrolling container for overlong slide content. A footer
+   pinned via `position:sticky` inside Marp's <section> (which itself lives
+   inside an SVG <foreignObject>) turned out unreliable — sticky positioning
+   has known cross-engine bugs inside foreignObject-hosted HTML. Sidestep it
+   entirely: <section> stays non-scrolling, and a small inline script (see
+   8.2-slides.md) wraps each slide's real content into this div at load
+   time, leaving footer/pagination as siblings OUTSIDE the scrolling area —
+   so they just sit plain-absolute against section's own (static) box,
+   no sticky needed, no foreignObject uncertainty.
+   Safety net for an overlong slide: mouse-wheel/trackpad scroll works, even
+   though Marp's arrow keys are claimed for slide nav, not in-slide scroll —
+   the real fix for an overlong slide is splitting it, not this. */
+.slide-scroll {
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+  padding-bottom: 50px; /* reserve room so content doesn't hide under the footer bar */
+  /* hide the scrollbar but keep scrolling functional — it's a presentation,
+     a visible scrollbar reads as a rendering artifact to the audience.
+     Needs all three: standard, legacy Edge/IE, and the WebKit/Blink
+     pseudo-element (which is what Brave/Chrome/Safari actually use). */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.slide-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* title slide (first slide, no heading before it needs a section look) can
+   still opt into vertical centering explicitly via class="title". section's
+   only direct child is now .slide-scroll (the wrapper), so the centering
+   has to happen one level in — style the wrapper itself, not section. */
+section.title .slide-scroll {
+  height: 100%;
+  overflow: visible; /* title slide never needs to scroll */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* IQC accent — dot-halftone grain, corner motif. Ported in spirit from the
+   parked manim mobjects/iqc_frame.py (ribbon+dots), rebuilt as a plain CSS
+   ::before on section itself (not an inserted <div>) for two reasons: (1)
+   section is already position:relative, so this needs no extra wrapper;
+   (2) a real DOM node here would break `.slide-scroll > h1:first-child`
+   (see below), knocking the centered heading off-center on both slide
+   types. Positioned flush against section's own padding box (-56px/-64px,
+   matching section's padding: 56px 64px exactly) so it lands precisely at
+   the slide's true corner with no overshoot past the slide bounds. */
+section.title::before,
+section.section::before {
+  content: '';
+  position: absolute;
+  top: -56px;
+  right: -64px;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background-image: radial-gradient(circle, var(--pt-iqc-maroon) 1.6px, transparent 1.8px);
+  background-size: 13px 13px;
+  opacity: 0.28;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* IQC accent — banner strip, a flat hatched band across the top edge (the
+   "ribbon" half of the iqc_frame.py corner motif, rebuilt flat rather than
+   as a diagonal-drop+bend path — a straight CSS band is reliable inside
+   Marp's SVG foreignObject, a hand-rolled bent path would be fighting the
+   same coordinate-space traps as the callout face-drawing script). A real
+   element, not a pseudo-element (::before is taken by the dot-grain above,
+   ::after by Marp's own pagination) — placed LAST in each slide's markup
+   so `.slide-scroll > h1:first-child` (which zeroes the centered heading's
+   top margin) still matches; position:absolute means DOM order doesn't
+   affect where it paints. */
+.pt-banner-strip {
+  position: absolute;
+  top: -56px;
+  left: -64px;
+  right: -64px;
+  height: 14px;
+  background: repeating-linear-gradient(-45deg,
+    var(--pt-iqc-maroon) 0px, var(--pt-iqc-maroon) 3px, transparent 3px, transparent 9px);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* IQC accent — maroon hatch bar. Reuses the existing h1::before hatch mark
+   (see the general h1 rule below) but recolored + thickened, scoped to
+   just these two slide types via selector specificity — ordinary content
+   h1s (Motivation: Simulation, Approximate Optimal Encodings, Conclusion)
+   keep the unscoped dark hatch untouched. */
+section.title h1::before,
+section.section h1::before {
+  width: 9px;
+  background: repeating-linear-gradient(-45deg,
+    var(--pt-iqc-maroon) 0px, var(--pt-iqc-maroon) 1.5px, transparent 1.5px, transparent 5px);
+  opacity: 0.75;
+}
+
+/* IQC wordmark — title slide only, bottom-right corner (Azal's choice,
+   2026-08-12). Section-divider slides deliberately get the accent grain +
+   hatch above but NOT this logo. */
+.iqc-title-logo {
+  position: absolute;
+  right: 40px;
+  bottom: 40px;
+  width: 340px; /* 2x, Azal's request 2026-08-12 (was 170px) */
+  z-index: 2;
+}
+
+/* section-divider subtitle — a plain paragraph directly under the h1 on a
+   section.section slide (e.g. "Approximate Optimal Encodings"'s italic
+   tagline). Same left-aligned "big heading, smaller line under it" pattern
+   the title slide already uses for "Azal Amer" under the main title. */
+section.section .slide-scroll > p {
+  font-size: 1.3em;
+  color: var(--pt-text-2);
+  margin-top: 0.4em;
+}
+
+h1, h2, h3 {
+  font-family: 'Georgia', serif;
+  color: var(--pt-text);
+}
+
+h1 {
+  position: relative;
+  padding-left: 20px;
+  font-size: 2.2em;
+}
+h1::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8%; bottom: 8%;
+  width: 7px;
+  background: repeating-linear-gradient(-45deg,
+    var(--pt-text) 0px, var(--pt-text) 1px, transparent 1px, transparent 5px);
+  opacity: 0.45;
+}
+
+h2 {
+  font-size: 1.6em;
+  /* IQC accent, 2026-08-12: was var(--pt-border) (translucent near-black) —
+     every slide's own heading rule, on every content slide, not scoped to
+     title/section like the accents above (Azal asked for this one deck-wide). */
+  border-bottom: 1.5px solid color-mix(in srgb, var(--pt-iqc-maroon) 40%, transparent);
+  padding-bottom: 4px;
+}
+
+h3 {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.95em;
+  opacity: 0.75;
+  font-weight: 500;
+}
+
+strong {
+  display: inline-block;
+  font-weight: 600;
+  padding: 0 5px;
+  border: var(--pt-border-w) solid rgba(28,16,8,0.22);
+  color: var(--pt-text);
+  background: var(--pt-bg);
+  /* IQC accent, 2026-08-12: was rgba(28,16,8,...) (near-black), deck-wide
+     like the h2 border above — every <strong> on every slide. */
+  box-shadow: -2px -2px 0 rgba(163,16,51,0.28), 2px 3px 6px rgba(163,16,51,0.14);
+}
+
+code {
+  border-radius: 0;
+  padding: 1px 5px;
+  background: var(--pt-surface);
+  border: 1px solid var(--pt-border);
+  color: var(--pt-text-2);
+  box-shadow: inset 1px 1px 0 rgba(28,16,8,0.08);
+  font-size: 0.85em;
+}
+
+pre {
+  border-radius: 0;
+  border: 1px solid var(--pt-border);
+  background: var(--pt-surface);
+  position: relative;
+  padding-left: 24px !important;
+}
+pre::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 12px;
+  background: repeating-linear-gradient(-45deg,
+    color-mix(in srgb, var(--pt-purple) 40%, transparent) 0px,
+    color-mix(in srgb, var(--pt-purple) 40%, transparent) 1.5px,
+    transparent 1.5px, transparent 6px);
+}
+pre code { background: transparent; border: none; box-shadow: none; }
+
+table { border-collapse: collapse; border: 1px solid var(--pt-border); }
+/* Dense data tables (many columns of LaTeX, e.g. the rank/basis/equation
+   table on "A... Plane?") need to shrink well below the default table size
+   and scroll horizontally rather than overflow the slide. */
+.dense-table { overflow-x: auto; }
+.dense-table table { font-size: 0.55em; width: max-content; max-width: none; }
+.dense-table th, .dense-table td { padding: 4px 8px; white-space: nowrap; }
+th {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  color: var(--pt-text-2);
+  border-bottom: 2px solid var(--pt-text);
+  padding: 6px 12px;
+  background: repeating-linear-gradient(-45deg,
+    color-mix(in srgb, var(--pt-text) 6%, transparent) 0px,
+    color-mix(in srgb, var(--pt-text) 6%, transparent) 1px,
+    transparent 1px, transparent 6px);
+}
+td { padding: 6px 12px; border-bottom: 1px solid var(--pt-border); }
+tr:last-child td { border-bottom: none; }
+
+/* KaTeX display blocks — hatched side strips, matches mjx-container rule in source */
+.katex-display {
+  position: relative;
+  padding: 10px 20px !important;
+  border-top: 1px solid var(--pt-border);
+  border-bottom: 1px solid var(--pt-border);
+  margin: 0.6em 0 !important;
+}
+.katex-display::before, .katex-display::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 10px;
+  background: repeating-linear-gradient(-45deg,
+    color-mix(in srgb, var(--pt-orange) 45%, transparent) 0px,
+    color-mix(in srgb, var(--pt-orange) 45%, transparent) 1px,
+    transparent 1px, transparent 5px);
+}
+.katex-display::before { left: 0; }
+.katex-display::after  { right: 0; }
+
+/* ---------------------------------------------------------------------
+   Callouts — div.callout[data-callout="type"], hand-built per slide
+   (Obsidian's "> [!type]" syntax isn't parsed by Marp's markdown-it, so
+   slides use explicit HTML — see 8.2-slides.md). Icon = a lucide glyph
+   masked to --pt-callout-stroke, matching Obsidian's real default (no
+   type ever gets a text label like "Example:" — the icon+color IS the
+   label, same as Obsidian renders it).
+   --------------------------------------------------------------------- */
+.callout {
+  position: relative;
+  border: var(--pt-border-w) solid var(--pt-callout-stroke, var(--pt-blue));
+  background: var(--pt-callout-bg, var(--pt-bg));
+  padding: 10px 16px 10px 50px;
+  /* top/left reserve room for the 3D top-left extrusion (scales with
+     --pt-depth, which varies per callout type). No cast shadow anymore
+     (see the JS face-drawing script), so nothing extends past the
+     callout's own right/bottom edge — just a few px there for the polygon
+     outline's stroke width, not a real reservation. */
+  margin: calc(var(--pt-depth) + 6px) 4px 0.6em calc(var(--pt-depth) + 6px);
+  isolation: isolate;
+}
+.callout::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 12px;
+  z-index: 1;
+  background: repeating-linear-gradient(-45deg,
+    var(--pt-callout-stroke, var(--pt-blue)) 0px, var(--pt-callout-stroke, var(--pt-blue)) 1.5px,
+    transparent 1.5px, transparent var(--pt-hatch-gap));
+  opacity: 0.65;
+}
+/* icon glyph, masked so it always renders in the callout's own color */
+.callout::after {
+  content: '';
+  position: absolute;
+  left: 22px; top: 12px;
+  width: 20px; height: 20px;
+  z-index: 1;
+  background-color: var(--pt-callout-stroke, var(--pt-blue));
+  -webkit-mask-image: var(--pt-callout-icon);
+  mask-image: var(--pt-callout-icon);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* title = the first paragraph inside a callout, written as plain **bold**
+   markdown (not a literal <p class="callout-title">) so inline math/bold
+   inside it still gets parsed by markdown-it/katex */
+.callout > p:first-of-type {
+  font-weight: 700;
+  color: var(--pt-callout-stroke, var(--pt-blue));
+  margin: 0 0 6px 0;
+}
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
+
+/* -------------------- per-type color + icon -------------------- */
+.callout[data-callout="example"] {
+  --pt-callout-stroke: var(--pt-red);
+  --pt-callout-icon: url("data:image/svg+xml;base64,PCEtLSBAbGljZW5zZSBsdWNpZGUtc3RhdGljIHYxLjMwLjAgLSBJU0MgLS0+CjxzdmcKICBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1saXN0IgogIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICB3aWR0aD0iMjQiCiAgaGVpZ2h0PSIyNCIKICB2aWV3Qm94PSIwIDAgMjQgMjQiCiAgZmlsbD0ibm9uZSIKICBzdHJva2U9ImN1cnJlbnRDb2xvciIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMyA1aC4wMSIgLz4KICA8cGF0aCBkPSJNMyAxMmguMDEiIC8+CiAgPHBhdGggZD0iTTMgMTloLjAxIiAvPgogIDxwYXRoIGQ9Ik04IDVoMTMiIC8+CiAgPHBhdGggZD0iTTggMTJoMTMiIC8+CiAgPHBhdGggZD0iTTggMTloMTMiIC8+Cjwvc3ZnPgo=");
+}
+.callout[data-callout="important"] {
+  --pt-callout-stroke: var(--pt-teal);
+  --pt-callout-icon: url("data:image/svg+xml;base64,PCEtLSBAbGljZW5zZSBsdWNpZGUtc3RhdGljIHYxLjMwLjAgLSBJU0MgLS0+CjxzdmcKICBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1mbGFtZSIKICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTEyIDNxMSA0IDQgNi41dDMgNS41YTEgMSAwIDAgMS0xNCAwIDUgNSAwIDAgMSAxLTMgMSAxIDAgMCAwIDUgMGMwLTItMS41LTMtMS41LTVxMC0yIDIuNS00IiAvPgo8L3N2Zz4K");
+}
+.callout[data-callout="note"],
+.callout[data-callout="info"] {
+  --pt-callout-stroke: var(--pt-blue);
+  --pt-callout-icon: url("data:image/svg+xml;base64,PCEtLSBAbGljZW5zZSBsdWNpZGUtc3RhdGljIHYxLjMwLjAgLSBJU0MgLS0+CjxzdmcKICBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1pbmZvIgogIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICB3aWR0aD0iMjQiCiAgaGVpZ2h0PSIyNCIKICB2aWV3Qm94PSIwIDAgMjQgMjQiCiAgZmlsbD0ibm9uZSIKICBzdHJva2U9ImN1cnJlbnRDb2xvciIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgLz4KICA8cGF0aCBkPSJNMTIgMTZ2LTQiIC8+CiAgPHBhdGggZD0iTTEyIDhoLjAxIiAvPgo8L3N2Zz4K");
+}
+.callout[data-callout="question"] {
+  --pt-callout-stroke: var(--pt-purple);
+  --pt-callout-icon: url("data:image/svg+xml;base64,PCEtLSBAbGljZW5zZSBsdWNpZGUtc3RhdGljIHYxLjMwLjAgLSBJU0MgLS0+CjxzdmcKICBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1oZWxwLWNpcmNsZSIKICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIC8+CiAgPHBhdGggZD0iTTkuMDkgOWEzIDMgMCAwIDEgNS44MyAxYzAgMi0zIDMtMyAzIiAvPgogIDxwYXRoIGQ9Ik0xMiAxN2guMDEiIC8+Cjwvc3ZnPgo=");
+}
+.callout[data-callout="warning"],
+.callout[data-callout="danger"],
+.callout[data-callout="caution"] {
+  --pt-callout-stroke: var(--pt-red);
+  --pt-callout-icon: url("data:image/svg+xml;base64,PCEtLSBAbGljZW5zZSBsdWNpZGUtc3RhdGljIHYxLjMwLjAgLSBJU0MgLS0+CjxzdmcKICBjbGFzcz0ibHVjaWRlIGx1Y2lkZS10cmlhbmdsZS1hbGVydCIKICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0ibTIxLjczIDE4LTgtMTRhMiAyIDAgMCAwLTMuNDggMGwtOCAxNEEyIDIgMCAwIDAgNCAyMWgxNmEyIDIgMCAwIDAgMS43My0zIiAvPgogIDxwYXRoIGQ9Ik0xMiA5djQiIC8+CiAgPHBhdGggZD0iTTEyIDE3aC4wMSIgLz4KPC9zdmc+Cg==");
+}
+.callout[data-callout="bug"] {
+  --pt-callout-stroke: var(--pt-red);
+  --pt-callout-icon: url("data:image/svg+xml;base64,PCEtLSBAbGljZW5zZSBsdWNpZGUtc3RhdGljIHYxLjMwLjAgLSBJU0MgLS0+CjxzdmcKICBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1idWciCiAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik0xMiAyMHYtOSIgLz4KICA8cGF0aCBkPSJNMTQgN2E0IDQgMCAwIDEgNCA0djNhNiA2IDAgMCAxLTEyIDB2LTNhNCA0IDAgMCAxIDQtNHoiIC8+CiAgPHBhdGggZD0iTTE0LjEyIDMuODggMTYgMiIgLz4KICA8cGF0aCBkPSJNMjEgMjFhNCA0IDAgMCAwLTMuODEtNCIgLz4KICA8cGF0aCBkPSJNMjEgNWE0IDQgMCAwIDEtMy41NSAzLjk3IiAvPgogIDxwYXRoIGQ9Ik0yMiAxM2gtNCIgLz4KICA8cGF0aCBkPSJNMyAyMWE0IDQgMCAwIDEgMy44MS00IiAvPgogIDxwYXRoIGQ9Ik0zIDVhNCA0IDAgMCAwIDMuNTUgMy45NyIgLz4KICA8cGF0aCBkPSJNNiAxM0gyIiAvPgogIDxwYXRoIGQ9Im04IDIgMS44OCAxLjg4IiAvPgogIDxwYXRoIGQ9Ik05IDcuMTNWNmEzIDMgMCAxIDEgNiAwdjEuMTMiIC8+Cjwvc3ZnPgo=");
+}
+.callout[data-callout="quote"],
+.callout[data-callout="cite"] {
+  --pt-callout-stroke: var(--pt-flamingo);
+  --pt-callout-icon: url("data:image/svg+xml;base64,PCEtLSBAbGljZW5zZSBsdWNpZGUtc3RhdGljIHYxLjMwLjAgLSBJU0MgLS0+CjxzdmcKICBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1xdW90ZSIKICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgd2lkdGg9IjI0IgogIGhlaWdodD0iMjQiCiAgdmlld0JveD0iMCAwIDI0IDI0IgogIGZpbGw9Im5vbmUiCiAgc3Ryb2tlPSJjdXJyZW50Q29sb3IiCiAgc3Ryb2tlLXdpZHRoPSIyIgogIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICBzdHJva2UtbGluZWpvaW49InJvdW5kIgo+CiAgPHBhdGggZD0iTTE2IDNhMiAyIDAgMCAwLTIgMnY2YTIgMiAwIDAgMCAyIDIgMSAxIDAgMCAxIDEgMXYxYTIgMiAwIDAgMS0yIDIgMSAxIDAgMCAwLTEgMXYyYTEgMSAwIDAgMCAxIDEgNiA2IDAgMCAwIDYtNlY1YTIgMiAwIDAgMC0yLTJ6IiAvPgogIDxwYXRoIGQ9Ik01IDNhMiAyIDAgMCAwLTIgMnY2YTIgMiAwIDAgMCAyIDIgMSAxIDAgMCAxIDEgMXYxYTIgMiAwIDAgMS0yIDIgMSAxIDAgMCAwLTEgMXYyYTEgMSAwIDAgMCAxIDEgNiA2IDAgMCAwIDYtNlY1YTIgMiAwIDAgMC0yLTJ6IiAvPgo8L3N2Zz4K");
+}
+/* callouts.css: definition — custom color + lucide-book-a icon */
+.callout[data-callout="definition"] {
+  --pt-callout-stroke: var(--pt-definition);
+  --pt-callout-icon: url("data:image/svg+xml;base64,PCEtLSBAbGljZW5zZSBsdWNpZGUtc3RhdGljIHYxLjMwLjAgLSBJU0MgLS0+CjxzdmcKICBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1ib29rLWEiCiAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iY3VycmVudENvbG9yIgogIHN0cm9rZS13aWR0aD0iMiIKICBzdHJva2UtbGluZWNhcD0icm91bmQiCiAgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIKPgogIDxwYXRoIGQ9Ik00IDE5LjV2LTE1QTIuNSAyLjUgMCAwIDEgNi41IDJIMTlhMSAxIDAgMCAxIDEgMXYxOGExIDEgMCAwIDEtMSAxSDYuNWExIDEgMCAwIDEgMC01SDIwIiAvPgogIDxwYXRoIGQ9Im04IDEzIDQtNyA0IDciIC8+CiAgPHBhdGggZD0iTTkuMSAxMWg1LjciIC8+Cjwvc3ZnPgo=");
+}
+/* callouts.css: equation — custom color + lucide-flask-conical icon */
+.callout[data-callout="equation"] {
+  --pt-callout-stroke: var(--pt-equation);
+  --pt-callout-icon: url("data:image/svg+xml;base64,PCEtLSBAbGljZW5zZSBsdWNpZGUtc3RhdGljIHYxLjMwLjAgLSBJU0MgLS0+CjxzdmcKICBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1mbGFzay1jb25pY2FsIgogIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICB3aWR0aD0iMjQiCiAgaGVpZ2h0PSIyNCIKICB2aWV3Qm94PSIwIDAgMjQgMjQiCiAgZmlsbD0ibm9uZSIKICBzdHJva2U9ImN1cnJlbnRDb2xvciIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMTQgMnY2YTIgMiAwIDAgMCAuMjQ1Ljk2bDUuNTEgMTAuMDhBMiAyIDAgMCAxIDE4IDIySDZhMiAyIDAgMCAxLTEuNzU1LTIuOTZsNS41MS0xMC4wOEEyIDIgMCAwIDAgMTAgOFYyIiAvPgogIDxwYXRoIGQ9Ik02LjQ1MyAxNWgxMS4wOTQiIC8+CiAgPHBhdGggZD0iTTguNSAyaDciIC8+Cjwvc3ZnPgo=");
+}
+
+/* ── Theorem / Lemma / Definition-family (Math Booster) — extrusion only,
+     no hatch, no icon, thin left border. definition is excluded here since
+     callouts.css gives it its own icon+color above (matches Obsidian: the
+     two plugins style "definition" differently and callouts.css wins). ── */
+.callout[data-callout="theorem"],
+.callout[data-callout="lemma"],
+.callout[data-callout="proposition"],
+.callout[data-callout="corollary"],
+.callout[data-callout="claim"],
+.callout[data-callout="assumption"],
+.callout[data-callout="conjecture"],
+.callout[data-callout="hypothesis"],
+.callout[data-callout="remark"],
+.callout[data-callout="axiom"],
+.callout[data-callout="proof"] {
+  --pt-callout-stroke: var(--pt-sapphire);
+  --pt-depth: 4px;
+  padding-left: 14px !important;
+}
+.callout[data-callout="lemma"] { --pt-callout-stroke: var(--pt-teal); }
+.callout[data-callout="theorem"]::before,
+.callout[data-callout="lemma"]::before,
+.callout[data-callout="proposition"]::before,
+.callout[data-callout="corollary"]::before,
+.callout[data-callout="claim"]::before,
+.callout[data-callout="assumption"]::before,
+.callout[data-callout="conjecture"]::before,
+.callout[data-callout="hypothesis"]::before,
+.callout[data-callout="remark"]::before,
+.callout[data-callout="axiom"]::before,
+.callout[data-callout="proof"]::before,
+.callout[data-callout="theorem"]::after,
+.callout[data-callout="lemma"]::after,
+.callout[data-callout="proposition"]::after,
+.callout[data-callout="corollary"]::after,
+.callout[data-callout="claim"]::after,
+.callout[data-callout="assumption"]::after,
+.callout[data-callout="conjecture"]::after,
+.callout[data-callout="hypothesis"]::after,
+.callout[data-callout="remark"]::after,
+.callout[data-callout="axiom"]::after,
+.callout[data-callout="proof"]::after {
+  display: none;
+}
+
+/* SVG 3D-face container injected by the <script> block — sits behind the
+   callout's own background, per the isolation:isolate + z-index above */
+.pt-face-svg {
+  position: absolute;
+  top: 0; left: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* two-column slide layout — callout/text left, diagram right */
+.two-col {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+.two-col .col-left { flex: 1.1; min-width: 0; }
+.two-col .col-right { flex: 0.9; min-width: 0; }
+
+/* Modifier for slides whose left column is short (a couple of lines rather
+   than a full callout + table): give the diagram the extra room instead of
+   leaving it as dead space beside the text. Scoped as a modifier rather
+   than retuning the base ratios, which are sized for the callout-heavy
+   "Example Representation" slide and look right there. */
+.two-col.wide-right .col-left { flex: 0.8; }
+.two-col.wide-right .col-right { flex: 1.2; }
+
+/* Modifier for a col-right diagram that's shorter than col-left: with the
+   base align-items:flex-start it just sits pinned to the top with dead
+   space below it. Vertically centers col-right against col-left's height
+   instead. Scoped, not the two-col default, because flex-start is correct
+   for a diagram that's already the taller column (e.g. Example
+   Representation) — centering there would do nothing useful. */
+.two-col.center-right { align-items: center; }
+/* Same idea, other direction: col-left (e.g. a diagram) shorter than
+   col-right (e.g. a bullet list) — vertically centers col-left against
+   col-right's height instead of pinning it to the top. */
+.two-col.center-left { align-items: center; }
+
+/* A callout directly after a bullet list inherits its full margin-top
+   (--pt-depth + 6px, 16px by default) meant for spacing a callout off
+   normal paragraph text -- stacked on a list's own bottom margin it's more
+   gap than a list->callout transition needs, and was enough on its own to
+   push "How Many Encodings are There?" ~12px past its available height
+   (measured: col-left content bottom vs. the slide's real safe zone above
+   the footer). Tightening this one transition, not callouts generally. */
+.col-left ul + .callout { margin-top: 6px; }
+
+/* Modifier for slides where BOTH columns should get equal real estate --
+   between the base ratio (1.1:0.9, sized for a text-heavy col-left) and
+   wide-right (0.8:1.2, which over-narrows col-left when it also carries a
+   callout and wraps it tall enough to overflow). Named for what it does,
+   not tied to one slide, since the next slide needing a mid-size diagram
+   next to non-trivial text will want the same thing. */
+.two-col.balanced-cols .col-left { flex: 1; }
+.two-col.balanced-cols .col-right { flex: 1; }
+
+/* NOTE on sizing up a lone KaTeX display (e.g. "To Ladders" col-right):
+   don't use CSS font-size/transform on .katex-display -- Marpit's CSS pass
+   intercepts `font-size` on selectors touching `.katex-display` (rewrites
+   it into an unused --marpit-root-font-size custom property) and
+   transform:scale doesn't grow the containing box, so wide aligned
+   equations clip past its right edge. Use KaTeX's own \Large/\LARGE
+   inside the $$ ... $$ source instead -- it reflows the box's actual
+   width, no CSS involved. */
+
+/* manim clip embeds — see .claude/notes/marp-manim-embedding.md for the
+   full pipeline. Rendered at manim.cfg's 1920x1080 with background_color
+   matching --pt-bg, so it should blend into the slide with no visible
+   video rectangle as long as that background stays in sync. */
+.manim-embed {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  margin: 0.6em auto;
+  border-radius: 0;
+}
+/* Wide (e.g. ~5:1) clips: the shared 640px cap is sized for the portrait
+   anticommute-matching clip and starves a wide clip's height (aspect ratio
+   forces it tiny). Opt in with this modifier class instead of raising the
+   shared cap, which would blow up the portrait clip too. */
+.manim-embed-wide {
+  max-width: 100%;
+}
+/* Full-slide-aspect (16:9) clips stacked BELOW existing heading+paragraph
+   text (not in a two-col side panel) — width:100% would size it off the
+   slide's remaining vertical room (a 1600x900 clip at full content width
+   comes out ~650px tall, more than what's left under a heading+paragraph).
+   Cap by height instead and let width follow the clip's own aspect ratio. */
+.manim-embed-fit {
+  width: auto;
+  max-width: 100%;
+  max-height: 430px;
+}
+/* +25% over .manim-embed-fit's cap, for slides with little text above the
+   clip (e.g. Fully Enumerated Encodings) that have the vertical room to
+   spare — a separate modifier rather than raising the shared 430px cap so
+   text-heavier .manim-embed-fit slides (e.g. Ternary Trees Construction)
+   aren't affected. */
+.manim-embed-fit-lg {
+  width: auto;
+  max-width: 100%;
+  max-height: 538px;
+}
+
+/* Interactive HTML embeds (e.g. the n=5 connectivity-graph viewer) — a live
+   canvas/JS tool via <iframe>, not a manim clip. Its own body background is
+   set to --pt-bg to match (see connectivity-graph-embed.html), same "blend
+   in, no visible rectangle" convention as .manim-embed. Tall by default:
+   this content is a dense force-directed graph, not a small diagram, so it
+   needs real room to be legible — scroll the slide to reach it/past it
+   rather than shrink it further. */
+.graph-embed {
+  display: block;
+  width: 100%;
+  height: 560px;
+  border: 0;
+  margin: 0.6em auto;
+}
+
+/* reveal-list: bullets that fade in as their paired video advances through
+   its pause-points, matched via data-reveal-video against the video id.
+   Built from plain divs, not a real list markup, so bold text and inline
+   math inside each item still get processed as markdown instead of being
+   swallowed as opaque raw HTML (the same blank-line trick the callouts use
+   elsewhere in this file). Styled to read as a bullet list via CSS alone.
+   Layout space is reserved even while hidden so later items appearing
+   doesn't reflow the ones already shown. */
+.reveal-item {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  position: relative;
+  padding-left: 1.1em;
+  margin: 0.6em 0;
+}
+.reveal-item::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+}
+.reveal-item.visible {
+  visibility: visible;
+  opacity: 1;
+}
+.reveal-item > p {
+  margin: 0;
+}
+
+/* section slide: big divider look, now used by the bare-heading section
+   dividers (Encodings, Encoding Space). Background stays the ordinary
+   ivory --pt-bg (Azal's explicit call, 2026-08-12) — NOT --pt-surface,
+   despite that being the original placeholder value from when this rule
+   was still unused; a distinct background would read as a different theme,
+   not an accent. section's direct child is .slide-scroll now, style that,
+   not section itself. */
+section.section {
+  background: var(--pt-bg);
+}
+section.section .slide-scroll {
+  height: 100%;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+section.section h1 { font-size: 3em; }
+
+/* subsection (##) heading always top-left — it's the first content element
+   in normal flow, so this just locks the spacing rather than repositioning.
+   Targets .slide-scroll's first child, NOT section's — content lives one
+   level deeper now that it's wrapped for independent scrolling. */
+.slide-scroll > h1:first-child,
+.slide-scroll > h2:first-child {
+  margin-top: 0;
+}
+
+/* Footer/pagination panel — a bar flush with the VERY BOTTOM of the slide.
+   `section` no longer scrolls (see .slide-scroll above), so this is plain
+   `position:absolute` against section's own static box — no sticky, no
+   foreignObject uncertainty. `section` still has 56px/64px padding though,
+   so the bar still needs matching negative margins to reach the true edge
+   rather than stopping at the inner padding line. Footer carries the
+   opaque background (a real bar, full width); the page number sits inside
+   that same bottom band via matching negative-margin edge-escape + right
+   alignment, so despite being a separate element it reads as "the page
+   number, on the right of the footer bar". */
+footer,
+section::after {
+  position: absolute !important;
+  bottom: 0 !important;
+  z-index: 5;
+}
+footer {
+  left: 0 !important;
+  right: 0 !important;
+  margin: 0 -64px -56px -64px !important; /* escape section's padding on all 3 sides that touch the bar */
+  /* padding-left is 128px, not 64px: measured (getBoundingClientRect on the
+     footer's own text node vs. a heading's) that the escape-the-padding
+     margin above and a plain 64px padding-left net out to the footer text
+     landing flush with the slide's true left edge (0px inset) instead of
+     the body content's 64px inset — a real ~64px misalignment, confirmed
+     by measurement, not derived from the CSS box-model spec (Azal caught
+     this 2026-08-12). Doubling the left padding restores alignment; if
+     this ever needs retuning, re-measure, don't re-derive. */
+  padding: 14px 64px 14px 128px !important;
+  box-sizing: border-box;
+  background: var(--pt-bg);
+  color: var(--pt-iqc-maroon);
+  font-size: 0.55em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-top: 1px solid var(--pt-iqc-maroon);
+}
+/* Page number: bottom-right (Azal tried bottom-left 2026-08-12, then asked
+   to revert to the right). Its OLD right:40px + margin-right:-64px
+   combination was invisible — over-constrained the same way footer's own
+   left/right/margin trick was (see footer's comment above) — so this is a
+   single `right` offset with no competing `left`/margin, not a re-run of
+   the broken version. z-index above footer's own so it's never hidden
+   behind the footer bar's opaque background regardless of DOM order. */
+section::after {
+  right: 40px !important;
+  left: auto !important;
+  margin: 0 !important;
+  padding-bottom: 14px !important; /* match footer's vertical padding so both sit on the same line */
+  font-size: 14px !important;
+  line-height: 1 !important;
+  color: var(--pt-iqc-maroon) !important;
+  z-index: 6 !important;
+}
